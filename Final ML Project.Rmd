@@ -1,0 +1,119 @@
+---
+title: "Practical ML Final Markdown"
+author: "Tony Kwang Hyun Kim"
+date: "11/19/2020"
+output: html_document
+---
+### Overview: 
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, I will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. 
+
+### Executive Summary: 
+
+Using the data provided, I initially split the training data (70% for training and 30% for cross validation). Using the data intended for training, I developed two prediction models: decision trees and random forest. Random forest model proved to be the more effective model with 99.78% accuracy which nears a out of sample error of 0. Therefore, this model was used for the separate testing data provided to predict the 20 test cases. 
+
+### Data Setup:
+
+Packages Used: 
+```{r}
+library(knitr)
+library(caret)
+library(Hmisc)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+```
+
+Data Retrieval:
+```{r}
+#URL 
+trainingUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+
+testingUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+#Downloading the datasets
+training <- read.csv(url(trainingUrl))
+testing <- read.csv(url(testingUrl))
+dim(training); dim(testing)
+```
+
+Splitting Data: 
+```{r}
+set.seed(1111)
+inTrain <- createDataPartition(training$classe, p = .6, list = F)
+trainData <- training[inTrain,]
+testData <- training[-inTrain,]
+dim(trainData); dim(testData)
+```
+
+Removing Zero Variance Variables 
+```{r}
+nzv <- nearZeroVar(trainData)
+
+trainData <- trainData[,-nzv]
+testData <- testData[,-nzv]
+dim(trainData);dim(testData)
+```
+
+Overall, we identified and removed 55 near zero variance variables resulting to a total of 105 variables total.  
+
+Removing Identifer Information 
+```{r}
+trainData <- trainData[,-c(1:5)]
+testData <- testData[,-c(1:5)]
+dim(trainData);dim(testData)
+```
+
+```{r}
+length(which((colSums(is.na(trainData))/11776)>.05))
+length(which((colSums(is.na(trainData))/11776)>.1))
+length(which((colSums(is.na(trainData))/11776)>.2))
+
+NaCols <- which((colSums(is.na(trainData))/11776)>.05)
+
+trainData <- trainData[,-NaCols]
+testData <- testData[,-NaCols]
+dim(trainData);dim(testData)
+```
+
+After removing all variables with near zero variance, no relevance to prediction, and variables with only NA values, we are left with 54 variables. 
+
+
+### Decision Tree Model 
+
+```{r}
+DecTreeMod <- rpart(classe ~ ., data=trainData, method="class")
+fancyRpartPlot(DecTreeMod) 
+DecTreePred <- predict(DecTreeMod, newdata = testData, type = "class")
+confusionMatrix(DecTreePred, factor(testData$classe))
+```
+Accuracy of .7851, out of sample error estimate to around .22
+
+### Random Forest Model 
+```{r}
+RanForMod <- randomForest(factor(classe) ~ ., data = trainData)
+print(RanForMod)
+RanForPred <- predict(RanForMod, testData, type = "class")
+confusionMatrix(RanForPred, factor(testData$classe))
+```
+Accuracy of .9978, out of sample estimating near to 0.
+
+### Applying Random Forest Model to Test Data
+```{r}
+predict(RanForMod, newdata = testing)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
